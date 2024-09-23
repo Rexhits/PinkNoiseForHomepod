@@ -36,3 +36,11 @@
     transform: rotate(360deg);
   }
 }
+
+.transport
+{
+  width: 12rem;
+  height: 6rem;
+  font-size: 2.5rem;
+  margin: 1rem;
+}

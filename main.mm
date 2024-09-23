@@ -32,6 +32,7 @@ static inline uint32_t ioCallback(struct __SCAudioIOBox_S* device,
             *(outBuff++) = fBuf[sample];
         }
     }
+    return true;
 }
 
 static inline uint32_t prepareForIO(struct __SCAudioIOBox_S* device,
@@ -43,11 +44,13 @@ static inline uint32_t prepareForIO(struct __SCAudioIOBox_S* device,
     state->biquad.coeff =
         SCFilterDesign_Biquad_LPF(context->outputFormat.sampleRate, 200, 0.707);
     SCBiquad_Prepare(&state->biquad);
+    return true;
 }
 
 static inline uint32_t ioStopped(struct __SCAudioIOBox_S* device,
                                  void* userData) noexcept
 {
+    return true;
 }
 
 int main()
