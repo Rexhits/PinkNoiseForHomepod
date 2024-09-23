@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.20)
 project (Pinknoise4Homepod)
-add_executable(${PROJECT_NAME} main.cpp)
+add_executable(${PROJECT_NAME} main.mm)
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 add_subdirectory(SonicCore_C)
 target_include_directories(${PROJECT_NAME} PRIVATE SonicCore_C/SonicCore_C/include)
