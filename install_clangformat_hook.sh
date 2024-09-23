@@ -1,3 +1,5 @@
+#!/bin/bash
+
 cp clangFormatHook/.clang-format .clang-format
 if [ -d .git ]; then \
     echo ".git is a folder - copying files to .git/hooks directory"; \

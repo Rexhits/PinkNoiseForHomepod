@@ -52,6 +52,8 @@ static inline uint32_t ioStopped(struct __SCAudioIOBox_S* device,
 
 int main()
 {
+    static constexpr float kNoiseOutputGain = -15;
+
     AppState appState;
 
     SCAudioHAL_Init(eSCOSAudioDriverType_CoreAudio);
@@ -69,15 +71,55 @@ int main()
     fmt.formatTypeID    = eSCAudioStreamFormatDataType_PCM;
     fmt.sampleRate      = 48000;
     uint32_t bufferSize = 512;
-    SCAudioIOBox_PrepareForIO(&appState.ioBox, &fmt, &bufferSize);
-    SCAudioIOBox_StartIO(&appState.ioBox);
 
+    SCSocket sock = SCSocket_Init(eSCSocketCommunicationDomain_IPv4Internet,
+                                  eSCSocketType_Datagram,
+                                  eSCSocketProtocol_UDP);
+    SCSocketAddress addr = SCSocketAddress_Init("127.0.0.1", 7878);
+    SCSocket_Server_Bind(&sock, &addr);
+    SCSocket_Server_Listen(&sock, 128);
+
+    SCStateTree* streamsTree =
+        SCStateTree_GetChildWithIDHash(appState.ioBox.stateTree,
+                                       iSCAudioHAL_OutputStreams);
+    SCStateTree* streamTree = SCStateTree_GetChildAt(streamsTree, 0);
+
+    float gaindB;
+
+    char mess[128];
+    int64_t szRead;
     while (!appState.shouldExit.load(std::memory_order_relaxed))
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(8));
+        if (SCSocket_PollRxAvailable(&sock, 8))
+        {
+            szRead = SCSocket_Receive(mess,
+                                      &sock,
+                                      sizeof(mess),
+                                      eSCIOMessageFlag_Empty);
+            if (std::memcmp(mess, "/api/play", szRead) == 0)
+            {
+                gaindB =
+                    SCStateTree_GetPropertyValueWithIDHash(float,
+                                                           streamTree,
+                                                           iSCAudioHAL_GaindB);
+                SCStateTree_SetPropertyWithIDHash(streamTree,
+                                                  iSCAudioHAL_GaindB,
+                                                  &kNoiseOutputGain);
+                SCAudioIOBox_PrepareForIO(&appState.ioBox, &fmt, &bufferSize);
+                SCAudioIOBox_StartIO(&appState.ioBox);
+            }
+            else if (std::memcmp(mess, "/api/stop", szRead) == 0)
+            {
+                SCAudioIOBox_StopIO(&appState.ioBox);
+                SCStateTree_SetPropertyWithIDHash(streamTree,
+                                                  iSCAudioHAL_GaindB,
+                                                  &gaindB);
+            }
+        }
     }
 
-    SCAudioIOBox_StopIO(&appState.ioBox);
+    SCAudioIOBox_Deinit(&appState.ioBox);
     SCAudioHAL_Deinit(eSCOSAudioDriverType_CoreAudio);
     return 0;
 }
